@@ -14,6 +14,11 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+
 @SpringBootApplication
 @EnableBatchProcessing
 public class LinkedinBatchApplication {
@@ -32,9 +37,11 @@ public class LinkedinBatchApplication {
 					@Override
 					public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
 						String item= chunkContext.getStepContext().getJobParameters().get("item").toString();
-						String date= chunkContext.getStepContext().getJobParameters().get("run.date").toString();
-
-						System.out.println(String.format("The %s has been packaged on %s",item,date));
+						//String date= chunkContext.getStepContext().getJobParameters().get("run.date").toString();
+						Date date = Calendar.getInstance().getTime();
+						DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
+						String strDate = dateFormat.format(date);
+						System.out.println("The "+item+ " has been package on "+strDate+".");
 						return RepeatStatus.FINISHED;
 					}
 				})
