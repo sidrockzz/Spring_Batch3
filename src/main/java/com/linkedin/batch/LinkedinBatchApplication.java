@@ -136,13 +136,12 @@ public class LinkedinBatchApplication {
 				})
 				.build();
 	}
-
 	@Bean
 	public Job deliverPackageJob() {
 		return this.jobBuilderFactory.get("deliverPackageJob")
 				.start(packageItemStep())
 				.next(driveToAddressStep())
-				.on("FAILED").stop()
+				.on("FAILED").fail()
 				.from(driveToAddressStep())
 				.on("*").to(decider())
 				.on("PRESENT").to(givePackageToCustomerStep())
