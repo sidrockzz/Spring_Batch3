@@ -30,6 +30,37 @@ public class LinkedinBatchApplication {
 	public StepBuilderFactory stepBuilderFactory;
 
 	@Bean
+	public Step givePackageToCustomerStep(){
+		return this.stepBuilderFactory
+				.get("givePackageToCustomerStep")
+				.tasklet(new Tasklet() {
+					@Override
+					public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
+						System.out.println("Given Package to the customer.");
+						return RepeatStatus.FINISHED;
+					}
+				}).build();
+	}
+
+	@Bean
+	public Step driveToAddressStep(){
+
+		boolean GOT_LOST = false;
+		return this.stepBuilderFactory
+				.get("driveToAddressStep")
+				.tasklet(new Tasklet() {
+					@Override
+					public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
+						if(GOT_LOST){
+							throw new RuntimeException("Got lost driving to the address");
+						}
+						System.out.println("Successfully arrived at the address.");
+						return RepeatStatus.FINISHED;
+					}
+				}).build();
+	}
+
+	@Bean
 	public Step packageItemStep() {
 		return this.stepBuilderFactory
 				.get("packageItemStep")
@@ -45,7 +76,7 @@ public class LinkedinBatchApplication {
 						return RepeatStatus.FINISHED;
 					}
 				})
-				.build();
+                .build();
 	}
 
 	@Bean
@@ -53,6 +84,8 @@ public class LinkedinBatchApplication {
 		return this.jobBuilderFactory
 				.get("deliveryPackageJob")
 				.start(packageItemStep())
+				.next(driveToAddressStep())
+				.next(givePackageToCustomerStep())
 				.build();
 	}
 
