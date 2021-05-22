@@ -15,6 +15,11 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+
 @SpringBootApplication
 @EnableBatchProcessing
 public class LinkedinBatchApplication {
@@ -30,6 +35,34 @@ public class LinkedinBatchApplication {
 		return new DeliveryDecider();
 	}
 
+	@Bean
+	public JobExecutionDecider receiptDecider() {
+		return new ReceiptDecider();
+	}
+
+	@Bean
+	public Step thankCustomerStep() {
+		return this.stepBuilderFactory.get("thankCustomerStep").tasklet(new Tasklet() {
+
+			@Override
+			public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+				System.out.println("Thanking the customer.");
+				return RepeatStatus.FINISHED;
+			}
+		}).build();
+	}
+
+	@Bean
+	public Step refundStep() {
+		return this.stepBuilderFactory.get("refundStep").tasklet(new Tasklet() {
+
+			@Override
+			public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+				System.out.println("Refunding customer money.");
+				return RepeatStatus.FINISHED;
+			}
+		}).build();
+	}
 	@Bean
 	public Step leaveAtDoorStep() {
 		return this.stepBuilderFactory.get("leaveAtDoorStep").tasklet(new Tasklet() {
@@ -87,17 +120,21 @@ public class LinkedinBatchApplication {
 
 	@Bean
 	public Step packageItemStep() {
-		return this.stepBuilderFactory.get("packageItemStep").tasklet(new Tasklet() {
-
-			@Override
-			public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
-				String item = chunkContext.getStepContext().getJobParameters().get("item").toString();
-				String date = chunkContext.getStepContext().getJobParameters().get("run.date").toString();
-
-				System.out.println(String.format("The %s has been packaged on %s.", item, date));
-				return RepeatStatus.FINISHED;
-			}
-		}).build();
+		return this.stepBuilderFactory
+				.get("packageItemStep")
+				.tasklet(new Tasklet() {
+					@Override
+					public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
+						String item= chunkContext.getStepContext().getJobParameters().get("item").toString();
+						//String date= chunkContext.getStepContext().getJobParameters().get("run.date").toString();
+						Date date = Calendar.getInstance().getTime();
+						DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
+						String strDate = dateFormat.format(date);
+						System.out.println("The "+item+ " has been package on "+strDate+".");
+						return RepeatStatus.FINISHED;
+					}
+				})
+				.build();
 	}
 
 	@Bean
@@ -109,6 +146,8 @@ public class LinkedinBatchApplication {
 				.from(driveToAddressStep())
 				.on("*").to(decider())
 				.on("PRESENT").to(givePackageToCustomerStep())
+				.next(receiptDecider()).on("CORRECT").to(thankCustomerStep())
+				.from(receiptDecider()).on("INCORRECT").to(refundStep())
 				.from(decider())
 				.on("NOT_PRESENT").to(leaveAtDoorStep())
 				.end()
